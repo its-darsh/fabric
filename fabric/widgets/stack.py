@@ -1,14 +1,23 @@
 import gi
-from typing import Literal
+from typing import Literal, NamedTuple
 from fabric.widgets.container import Container
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 
+class StackChild(NamedTuple):
+    widget: Gtk.Widget
+    name: str | None = None
+
+
 class Stack(Gtk.Stack, Container):
     def __init__(
         self,
+        children: list[Gtk.Widget]
+        | list[StackChild]
+        | list[tuple[Gtk.Widget, str | None]]
+        | None = None,
         transition_type: Literal[
             "none",
             "crossfade",
@@ -55,6 +64,8 @@ class Stack(Gtk.Stack, Container):
         **kwargs,
     ) -> None:
         """
+        :param children: list of children should be added to this stack, a `list` of widgets can be used or `list` of `tuple`s containing widgets and names can be used as well
+        :type children: list[Gtk.Widget] | list[StackChild] | list[tuple[Gtk.Widget, str | None]] | None, optional
         :param transition_type: the transition type to use, defaults to None
         :param transition_duration: the duration of the transition, defaults to None
         :type transition_duration: int | None, optional
@@ -115,6 +126,7 @@ class Stack(Gtk.Stack, Container):
             name,
             size,
         )
+        self.set_children(children)
         self.do_connect_signals_for_kwargs(kwargs)
 
     def set_transition_type(
@@ -173,3 +185,21 @@ class Stack(Gtk.Stack, Container):
                 # "rotate-left-right": Gtk.StackTransitionType.ROTATE_LEFT_RIGHT,
             }.get(transition, Gtk.StackTransitionType.NONE)
         )
+
+    # overrides
+    def set_schildren(
+        self,
+        children: list[Gtk.Widget]
+        | list[StackChild]
+        | list[tuple[Gtk.Widget, str | None]],
+    ) -> None:
+        self.reset_children()
+        if isinstance(children, list):
+            for child in children:
+                if isinstance(child, (StackChild, tuple)) and len(child) == 2:
+                    self.add_named(child[0], child[1])
+                else:
+                    self.add(child)
+        elif isinstance(children, Gtk.Widget):
+            self.add(children)
+        return
