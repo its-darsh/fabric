@@ -36,18 +36,35 @@ Number: TypeAlias = int | float
 
 
 class __DeprecationHook__:
-    def __init__(self, deprecated_to_replacement: dict[str, str]):
+    def __init__(self, deprecated_to_replacement: dict[str, str | None]):
         self.lookup_table = deprecated_to_replacement
 
     def __call__(self, addional_message: str | None = None):
-        if replacement := self.lookup_table.get(
-            (caller := inspect.currentframe().f_back.f_code.co_name),  # type: ignore
-            None,
-        ):
-            return logger.warning(
-                f"the function `{caller}` is deprecated and will removed in later versions of Fabric, consider using `{replacement}` instead"
+        def inner(func):
+            func_name = func.__name__
+            replacement = self.lookup_table.get(func_name, None)
+            message = f"`{func_name}` is deprecated and will be removed in later versions of Fabric."
+            message += (
+                f" consider using `{replacement}` instead." if replacement else ""
             )
-        return
+            message += f" {addional_message}" if addional_message else ""
+            func.__doc__ = (
+                (func.__doc__ or "")
+                + f"""
+        .. warning::
+
+            {message}
+"""
+            )
+
+            @wraps(func)
+            def warn_call(*args, **kwargs):
+                logger.warning(message)
+                return func(*args, **kwargs)
+
+            return warn_call
+
+        return inner
 
 
 __deprecation_table = __DeprecationHook__(
@@ -267,7 +284,6 @@ def parse_color(color: str | Iterable[Number]) -> Gdk.RGBA:
 
 
 def get_gdk_rgba(color: str | Iterable[Number]) -> Gdk.RGBA:
-    __deprecation_table()
     return parse_color(color)
 
 
@@ -282,7 +298,9 @@ def compile_css(
     supports transpiling web-css like variables over to GTK's `@define-color` syntax.
 
     also supports having CSS macros. syntax example:
+
     .. code-block:: css
+
         /* define a macro */
         @define my-macro(--arg-1, --arg-2) {
             /* CSS body goes here. example body.. */
@@ -474,7 +492,7 @@ def bulk_connect(
 
     :param connectable: the object to connect the signals to
     :type connectable: GObject.Object
-    :param mapping: the mapping of signals to callbacks, example: `{"signal-name": lambda *args: ...}`
+    :param mapping: the mapping of signals to callback functions
     :type mapping: dict[str, Callable]
     :rtype: tuple[int, ...]
     """
@@ -738,16 +756,6 @@ def kebab_case_to_snake_case(string: str) -> str:
     return string.replace("-", "_").lower()
 
 
-def get_connectables_for_kwargs(kwargs: dict[str, Callable]) -> Generator:
-    __deprecation_table()
-    for key, value in zip(kwargs.keys(), kwargs.values()):
-        if key.startswith("on_"):
-            yield [snake_case_to_kebab_case(key[3:]), value]
-        elif key.startswith("notify_"):
-            # yield a connectable property
-            yield [f"notify::{snake_case_to_kebab_case(key[7:])}", value]
-
-
 def get_enum_member(
     enum: type[E], member: str | E, mapping: dict[str, str] = {}, default: Any = MISSING
 ) -> E:
@@ -875,9 +883,20 @@ def remove_handler(handler_id: int):
 
 
 # FIXME: deprecated (please don't use, there's a replacement of each function)
-def set_stylesheet_from_file(file_path: str, compiled: bool = True) -> None:
-    __deprecation_table()
 
+
+@__deprecation_table()
+def get_connectables_for_kwargs(kwargs: dict[str, Callable]) -> Generator:
+    for key, value in zip(kwargs.keys(), kwargs.values()):
+        if key.startswith("on_"):
+            yield [snake_case_to_kebab_case(key[3:]), value]
+        elif key.startswith("notify_"):
+            # yield a connectable property
+            yield [f"notify::{snake_case_to_kebab_case(key[7:])}", value]
+
+
+@__deprecation_table()
+def set_stylesheet_from_file(file_path: str, compiled: bool = True) -> None:
     provider = Gtk.CssProvider()
     if compiled:
         with open(file_path, "r") as f:
@@ -891,9 +910,8 @@ def set_stylesheet_from_file(file_path: str, compiled: bool = True) -> None:
     return
 
 
+@__deprecation_table()
 def set_stylesheet_from_string(css_string: str, compiled: bool = True) -> None:
-    __deprecation_table()
-
     provider = Gtk.CssProvider()
     if compiled:
         provider.load_from_data(bytearray(compile_css(css_string), "utf-8"))
@@ -905,6 +923,6 @@ def set_stylesheet_from_string(css_string: str, compiled: bool = True) -> None:
     return
 
 
+@__deprecation_table()
 def idlify(func: Callable, *args) -> int:
-    __deprecation_table()
     return idle_add(func, *args)

@@ -27,12 +27,27 @@ def get_hyprland_connection() -> Hyprland:
 
 
 class WorkspaceButton(Button):
+    """A button intented to be used with the `Workspaces` widget
+
+    It implements fields specific its usage (e.g. the `active`, `urgent` and `empty` properties)
+
+    .. tip::
+
+        For CSS styling, this button adds a style class for each state of its own
+    """
+
     @Property(int, "readable")
     def id(self) -> int:
         return self._id
 
     @Property(bool, "read-write", default_value=False)
     def active(self) -> bool:
+        """Whether this is the currently active workspace button or not
+
+        The style class `active` should be set if this is the currently active button
+
+        :rtype: bool
+        """
         return self._active
 
     @active.setter
@@ -45,6 +60,12 @@ class WorkspaceButton(Button):
 
     @Property(bool, "read-write", default_value=False)
     def urgent(self) -> bool:
+        """Whether the workspace associated with this button is currently urgent or not
+
+        The style class `urgent` should be set if the workspace was marked as urgent
+
+        :rtype: bool
+        """
         return self._urgent
 
     @urgent.setter
@@ -55,6 +76,12 @@ class WorkspaceButton(Button):
 
     @Property(bool, "read-write", default_value=True)
     def empty(self) -> bool:
+        """Whether the workspace associated with this button is marked as empty or not
+
+        The style class `empty` should be set if the workspace was marked as empty
+
+        :rtype: bool
+        """
         return self._empty
 
     @empty.setter
@@ -87,6 +114,40 @@ class WorkspaceButton(Button):
         size: Iterable[int] | int | None = None,
         **kwargs,
     ):
+        """
+        :param id: the identifier of this button's workspace
+        :type id: int
+        :param label: lazily evaluated string to be used as the label of this button, the button itself is available via the formatter field `button`, defaults to None
+        :type label: FormattedString | str | None, optional
+        :param image: an image widget to be added inside this button, defaults to None
+        :type image: Gtk.Image | None, optional
+        :param child: a child widget to put inside this button, defaults to None
+        :type child: Gtk.Widget | None, optional
+        :param name: the name identifer for this widget (useful for styling), defaults to None
+        :type name: str | None, optional
+        :param visible: whether should this widget be visible or not once initialized, defaults to True
+        :type visible: bool, optional
+        :param all_visible: whether should this widget and all of its children be visible or not once initialized, defaults to False
+        :type all_visible: bool, optional
+        :param style: inline stylesheet to be applied on this widget, defaults to None
+        :type style: str | None, optional
+        :param style_classes: a list of style classes to be added into this widget once initialized, defaults to None
+        :type style_classes: Iterable[str] | str | None, optional
+        :param tooltip_text: the text that should be rendered inside the tooltip, defaults to None
+        :type tooltip_text: str | None, optional
+        :param tooltip_markup: same as `tooltip_text` but it accepts simple markup expressions, defaults to None
+        :type tooltip_markup: str | None, optional
+        :param h_align: horizontal alignment of this widget (compared to its parent), defaults to None
+        :type h_align: Literal["fill", "start", "end", "center", "baseline"] | Gtk.Align | None, optional
+        :param v_align: vertical alignment of this widget (compared to its parent), defaults to None
+        :type v_align: Literal["fill", "start", "end", "center", "baseline"] | Gtk.Align | None, optional
+        :param h_expand: whether should this widget fill in all the available horizontal space or not, defaults to False
+        :type h_expand: bool, optional
+        :param v_expand: whether should this widget fill in all the available vertical space or not, defaults to False
+        :type v_expand: bool, optional
+        :param size: a fixed size for this widget (not guranteed to get applied), defaults to None
+        :type size: Iterable[int] | int | None, optional
+        """
         super().__init__(
             None,
             image,
@@ -124,8 +185,15 @@ class WorkspaceButton(Button):
 
 
 class Workspaces(EventBox):
+    """Implementation of a commonly used workspaces widget for Hyprland"""
+
     @staticmethod
     def default_buttons_factory(workspace_id: int):
+        """
+        The default workspace buttons factory
+
+        The button it bakes uses the given workspace ID as its label
+        """
         return WorkspaceButton(id=workspace_id, label=str(workspace_id))
 
     def __init__(
@@ -137,6 +205,17 @@ class Workspaces(EventBox):
         empty_scroll: bool = False,
         **kwargs,
     ):
+        """
+
+        :param buttons: a list of predefined buttons, if a workspace was opened but no button representing it in the given list was found, call the buttons factory function to create a button for that workspace, defaults to None
+        :type buttons: Iterable[WorkspaceButton] | None, optional
+        :param buttons_factory: a factory for creating buttons once they're needed, the given function will only be called if no button was found for the new workspace in the given list of predefined buttons, the function can return None instead of a button to ignore adding that workspace, defaults to default_buttons_factory
+        :type buttons_factory: Callable[[int], WorkspaceButton  |  None] | None, optional
+        :param invert_scroll: invert the scroll wheel's direction (for switching via the wheel), defaults to False
+        :type invert_scroll: bool, optional
+        :param empty_scroll: scroll through empty workspaces (if found in the list), defaults to False
+        :type empty_scroll: bool, optional
+        """
         super().__init__(events="scroll")
         self.connection = get_hyprland_connection()
         self._container = Box(**kwargs)
@@ -310,6 +389,7 @@ class Workspaces(EventBox):
         return logger.info(f"[Workspaces] Moved to workspace {button.id}")
 
 
+# TODO: document
 class ActiveWindow(Button):
     def __init__(
         self,

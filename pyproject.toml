@@ -39,3 +39,13 @@ system-status = ["psutil"]
 "Source" = "https://github.com/Fabric-Development/fabric"
 "Bug Tracker" = "https://github.com/Fabric-Development/fabric/issues"
 "Changelog" = "https://github.com/Fabric-Development/fabric/blob/master/CHANGELOG.md"
+
+
+[tool.mypy]
+disable_error_code = ["no-redef", "method-assign"]
+
+[tool.pyright]
+reportRedeclaration = "none" # for fabric properties
+reportIncompatibleMethodOverride = "none"
+reportIncompatibleVariableOverride = "none"
+reportMissingModuleSource = "none" # for pygobject-stubs users
